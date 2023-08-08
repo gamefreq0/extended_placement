@@ -19,13 +19,15 @@ local hud_vert_def = {
 
 local function get_vertical_target(eye_pos, scaled_look_dir, player)
 	local pos_above = vector.add(eye_pos, vector.new(0, -1, 0))
+	local pos_below = vector.add(eye_pos, vector.new(0, 1, 0))
 	local pitch = player:get_look_vertical()
-	local pointed = minetest.raycast(pos_above, vector.add(pos_above, scaled_look_dir), false, false)
+	local pointed = minetest.raycast(pos_below, vector.add(pos_below, scaled_look_dir), false, false)
 	local pointed_thing
 	local target
 	local direction
 	for pointed_thing in pointed do
-		if ((pitch > 0) and (pointed_thing) and (pointed_thing.type == "node") and (math.abs(pointed_thing.under.y - player:get_pos().y) > 3)) then
+		if ((pitch > 0) and (pointed_thing) and (pointed_thing.type == "node") and (math.abs(eye_pos.y - pointed_thing.under.y) > 1)) then
+			dbg.pp(minetest.get_node(pointed_thing.under))
 			target = pointed_thing
 			break
 		end
