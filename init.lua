@@ -34,7 +34,7 @@ local function get_vertical_target(eye_pos, scaled_look_dir, player)
 	end
 	if (target) then
 		direction = vector.new(0, -1, 0)
-		target.under.y = target.under.y + 1 -- Again, off by one. The fact it doesn't break the below bit means the below is probably returning wrong coords by 1
+		--target.under.y = target.under.y + 1 -- Again, off by one. The fact it doesn't break the below bit means the below is probably returning wrong coords by 1
 		return {target = target, direction = direction}
 	end
 	pointed = minetest.raycast(pos_above, vector.add(pos_above, scaled_look_dir), false, false)
@@ -60,7 +60,7 @@ local function get_horizontal_target(eye_pos, scaled_look_dir, step_dir, player)
 	for pointed_thing in pointed do
 		if ((pointed_thing) and (pointed_thing.type == "node")) then
 			target = pointed_thing
-			target.under.y = target.under.y + 1 -- Why is it one down? I probably have a bug somewhere
+			--target.under.y = target.under.y + 1 -- Why is it one down? I probably have a bug somewhere
 			direction = step_dir
 			break
 		end
@@ -136,10 +136,17 @@ local function is_player_looking_past_node(dtime)
 					if ((p.get_player_control(p).place) and (result.target) and (result.direction)) then
 						if (place_cooldown >= 0.3) then
 							place_cooldown = 0
-							minetest.place_node(vector.add(result.target.under, result.direction), minetest.registered_nodes[wield_name])
-							item_stack = p:get_wielded_item()
-							item_stack:take_item(1)
-							p:set_wielded_item(item_stack)
+							local new_pos = vector.add(result.target.under, result.direction)
+							result.target.under = new_pos
+							if minetest.is_protected(new_pos, p:get_player_name()) then
+								return
+							end
+							local wieldstack = p:get_wielded_item()
+							p:set_wielded_item(minetest.item_place(wieldstack, p, result.target))
+							--minetest.place_node(vector.add(result.target.under, result.direction), minetest.registered_nodes[wield_name])
+							--item_stack = p:get_wielded_item()
+							--item_stack:take_item(1)
+							--p:set_wielded_item(item_stack)
 						end
 					end
 				end
