@@ -21,7 +21,8 @@ local function get_vertical_target(eye_pos, scaled_look_dir, player)
 	local pos_above = vector.add(eye_pos, vector.new(0, -1, 0))
 	local pos_below = vector.add(eye_pos, vector.new(0, 1, 0))
 	local pitch = player:get_look_vertical()
-	local pointed = minetest.raycast(pos_below, vector.add(pos_below, scaled_look_dir), false, false)
+	local pointed
+	pointed = minetest.raycast(pos_below, vector.add(pos_below, scaled_look_dir), false, false)
 	local pointed_thing
 	local target
 	local direction
@@ -33,6 +34,7 @@ local function get_vertical_target(eye_pos, scaled_look_dir, player)
 	end
 	if (target) then
 		direction = vector.new(0, -1, 0)
+		target.under.y = target.under.y + 1 -- Again, off by one. The fact it doesn't break the below bit means the below is probably returning wrong coords by 1
 		return {target = target, direction = direction}
 	end
 	pointed = minetest.raycast(pos_above, vector.add(pos_above, scaled_look_dir), false, false)
@@ -75,7 +77,10 @@ local function get_extended_placement_target(eye_pos, scaled_look_dir, step_dir,
 	return {target = target.target, direction = target.direction}
 end
 
-local function is_player_looking_past_node()
+local place_cooldown = 0
+
+local function is_player_looking_past_node(dtime)
+	place_cooldown = place_cooldown + dtime
 	local p = minetest.get_player_by_name("singleplayer")
 	if (HorizHud) then
 		p:hud_remove(HorizHud)
@@ -129,7 +134,13 @@ local function is_player_looking_past_node()
 						end
 					end
 					if ((p.get_player_control(p).place) and (result.target) and (result.direction)) then
-						minetest.place_node(vector.add(result.target.under, result.direction), minetest.registered_nodes[wield_name])
+						if (place_cooldown >= 0.3) then
+							place_cooldown = 0
+							minetest.place_node(vector.add(result.target.under, result.direction), minetest.registered_nodes[wield_name])
+							item_stack = p:get_wielded_item()
+							item_stack:take_item(1)
+							p:set_wielded_item(item_stack)
+						end
 					end
 				end
 			end
@@ -140,9 +151,9 @@ end
 local timer=0
 minetest.register_globalstep(function (dtime)
 	timer = timer + dtime
-	if (timer >= 0.2) then
+	if (timer >= 0.01) then
 		timer = 0
-		is_player_looking_past_node()
+		is_player_looking_past_node(dtime)
 	end
 
 end)
