@@ -27,13 +27,12 @@ local function get_vertical_target(eye_pos, scaled_look_dir, player)
 	local direction
 	for pointed_thing in pointed do
 		if ((pitch > 0) and (pointed_thing) and (pointed_thing.type == "node") and (math.abs(eye_pos.y - pointed_thing.under.y) > 1)) then
-			dbg.pp(minetest.get_node(pointed_thing.under))
 			target = pointed_thing
 			break
 		end
 	end
 	if (target) then
-		direction = vector.new(0, 1, 0)
+		direction = vector.new(0, -1, 0)
 		return {target = target, direction = direction}
 	end
 	pointed = minetest.raycast(pos_above, vector.add(pos_above, scaled_look_dir), false, false)
@@ -44,22 +43,23 @@ local function get_vertical_target(eye_pos, scaled_look_dir, player)
 		end
 	end
 	if (target) then
-		direction = vector.new(0, -1, 0)
+		direction = vector.new(0, 1, 0)
 		return {target = target, direction = direction}
 	end
 	return {target = nil, direction = nil}
 end
 
 local function get_horizontal_target(eye_pos, scaled_look_dir, step_dir, player)
-	local stepped_pos = vector.add(eye_pos, step_dir)
-	local pointed = minetest.raycast(stepped_pos, vector.add(stepped_pos, scaled_look_dir), false, false)
+	local stepped_offset = vector.add(eye_pos, vector.multiply(step_dir, -1))
+	local pointed = minetest.raycast(stepped_offset, vector.add(stepped_offset, scaled_look_dir), false, false)
 	local pointed_thing
 	local target
 	local direction
 	for pointed_thing in pointed do
-		if ((pointed_thing) and (pointed_thing.type == "node") and (pointed_thing.under ~= vector.round(stepped_pos))) then
+		if ((pointed_thing) and (pointed_thing.type == "node")) then
 			target = pointed_thing
-			direction = vector.multiply(step_dir, -1)
+			target.under.y = target.under.y + 1 -- Why is it one down? I probably have a bug somewhere
+			direction = step_dir
 			break
 		end
 	end
@@ -67,10 +67,6 @@ local function get_horizontal_target(eye_pos, scaled_look_dir, step_dir, player)
 end
 
 local function get_extended_placement_target(eye_pos, scaled_look_dir, step_dir, player)
-
---	local beside_test = minetest.raycast(vector.add(pos, vector.multiply(direction_vec, -0.5)), scaled_look_dir, false, false)
---	local below_test = minetest.raycast(vector.add(pos, vector.new(0, 0.5, 0)), scaled_look_dir, false, false)
---	local above_test = minetest.raycast(vector.add(pos, vector.new(0, -2.125, 0)), scaled_look_dir, false, false)
 	local target
 	target = get_vertical_target(eye_pos, scaled_look_dir, player)
 	if (not target.target) then
@@ -104,7 +100,7 @@ local function is_player_looking_past_node()
 				local def = p:get_wielded_item():get_definition()
 				local scaled_look_dir = vector.multiply(dir, def.range or 4)
 				local look_yaw = vector.new(0, p:get_look_horizontal(), 0)
-				local look_xz = vector.rotate(vector.new(0, 0, 1), look_yaw)
+				local look_xz = vector.normalize(vector.rotate(vector.new(0, 0, 1), look_yaw))
 				local direction_vec
 				if ((math.abs(look_xz.x)) > (math.abs(look_xz.z))) then
 					direction_vec = vector.normalize(vector.new(look_xz.x, 0, 0))
@@ -131,6 +127,9 @@ local function is_player_looking_past_node()
 						if (not HorizHud) then
 							HorizHud = p:hud_add(hud_horiz_def)
 						end
+					end
+					if ((p.get_player_control(p).place) and (result.target) and (result.direction)) then
+						minetest.place_node(vector.add(result.target.under, result.direction), minetest.registered_nodes[wield_name])
 					end
 				end
 			end
