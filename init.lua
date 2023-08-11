@@ -121,10 +121,12 @@ local function is_player_looking_past_node(dtime)
 				if (not pointed_node) then
 					local result = get_extended_placement_target(eye_pos, scaled_look_dir, direction_vec, p)
 					if ((result.direction) and (result.direction.y ~= 0)) then
-						if (p.get_player_control(p).sneak) then
+						if (p.get_player_control(p).sneak) then -- TODO: OR with config option to allow building without sneak if enabled
 							if (not VertHud) then
 								VertHud = p:hud_add(hud_vert_def)
 							end
+						else
+							result.target = nil -- Prevent player from building up/down without sneaking. TODO: Probably make this configurable
 						end
 					elseif ((result.direction) and ((result.direction.x ~= 0) or (result.direction.z ~= 0))) then
 						if (not HorizHud) then
