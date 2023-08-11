@@ -156,6 +156,10 @@ local function is_player_looking_past_node(dtime)
 		if minetest.is_protected(new_pos, p:get_player_name()) then
 			return
 		end
+		local player_pos = vector.round(p:get_pos())
+		if ((target.under.x == player_pos.x) and (target.under.z == player_pos.z) and ((target.under.y == player_pos.y) or (target.under.y - 1 == player_pos.y))) then
+			return
+		end
 		local wieldstack = p:get_wielded_item()
 		local _, position = minetest.item_place(wieldstack, p, target)
 		if (not position) then
@@ -165,7 +169,7 @@ local function is_player_looking_past_node(dtime)
 		local placed_node = minetest.get_node(position)
 		local placed_node_def = minetest.registered_nodes[placed_node.name]
 		local sound_param = {pos = position}
-		minetest.sound_play(placed_node_def.sounds.place, par, true)
+		minetest.sound_play(placed_node_def.sounds.place, sound_param, true)
 	end
 end
 
