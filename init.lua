@@ -34,20 +34,20 @@ local function get_vertical_target(eye_pos, scaled_look_dir, player)
 	end
 	if (target) then
 		direction = vector.new(0, -1, 0)
-		return {target = target, direction = direction}
+		return target, direction
 	end
 	pointed = minetest.raycast(pos_above, vector.add(pos_above, scaled_look_dir), false, false)
 	for pointed_thing in pointed do
-		if ((pitch < 0) and (pointed_thing) and (pointed_thing.type == "node") and (math.abs(player:get_pos().y - pointed_thing.under.y) > 2)) then
+		if ((pitch < 0) and (pointed_thing) and (pointed_thing.type == "node") and (math.abs(player:get_pos().y - pointed_thing.under.y) > 1)) then
 			target = pointed_thing
 			break
 		end
 	end
 	if (target) then
 		direction = vector.new(0, 1, 0)
-		return {target = target, direction = direction}
+		return target, direction
 	end
-	return {target = nil, direction = nil}
+	return
 end
 
 local function get_horizontal_target(eye_pos, scaled_look_dir, step_dir, player)
@@ -63,16 +63,16 @@ local function get_horizontal_target(eye_pos, scaled_look_dir, step_dir, player)
 			break
 		end
 	end
-	return {target = target, direction = direction}
+	return target, direction
 end
 
 local function get_extended_placement_target(eye_pos, scaled_look_dir, step_dir, player)
-	local target
-	target = get_vertical_target(eye_pos, scaled_look_dir, player)
-	if (not target.target) then
-		target = get_horizontal_target(eye_pos, scaled_look_dir, step_dir, player)
+	local target, direction
+	target, direction = get_vertical_target(eye_pos, scaled_look_dir, player)
+	if (not target) then
+		target, direction = get_horizontal_target(eye_pos, scaled_look_dir, step_dir, player)
 	end
-	return {target = target.target, direction = target.direction}
+	return target, direction
 end
 
 local place_cooldown = 0
@@ -88,66 +88,83 @@ local function is_player_looking_past_node(dtime)
 		p:hud_remove(VertHud)
 		VertHud = nil
 	end
-	if (p ~= nil) then
-		if (p:get_wielded_item() ~= nil) then
-			local wield_name = ItemStack().get_name(p:get_wielded_item())
-			if (minetest.registered_nodes[wield_name]) then
-				local dir = p:get_look_dir()
-				local eye_pos = p:get_pos()
-				eye_pos.y = eye_pos.y + p:get_properties().eye_height
-				local first, third = p:get_eye_offset()
-				if not vector.equals(first, third) then
-					minetest.log("warning", "First & third person eye offsets don't match, assuming first person")
-				end
-				eye_pos = vector.add(eye_pos, vector.divide(first, 10)) -- eye offsets are in block space (10x), transform them back to metric
-				local def = p:get_wielded_item():get_definition()
-				local scaled_look_dir = vector.multiply(dir, def.range or 4)
-				local look_yaw = vector.new(0, p:get_look_horizontal(), 0)
-				local look_xz = vector.normalize(vector.rotate(vector.new(0, 0, 1), look_yaw))
-				local direction_vec
-				if ((math.abs(look_xz.x)) > (math.abs(look_xz.z))) then
-					direction_vec = vector.normalize(vector.new(look_xz.x, 0, 0))
-				else
-					direction_vec = vector.normalize(vector.new(0, 0, look_xz.z))
-				end
-				local pointed = minetest.raycast(eye_pos, vector.add(eye_pos, scaled_look_dir), false, false)
-				local pointed_thing
-				local pointed_node
-				for pointed_thing in pointed do
-					if (pointed_thing and pointed_thing.type == "node") then
-						pointed_node = pointed_thing
-					end
-				end
-				if (not pointed_node) then
-					local result = get_extended_placement_target(eye_pos, scaled_look_dir, direction_vec, p)
-					if ((result.direction) and (result.direction.y ~= 0)) then
-						if (p.get_player_control(p).sneak) then -- TODO: OR with config option to allow building without sneak if enabled
-							if (not VertHud) then
-								VertHud = p:hud_add(hud_vert_def)
-							end
-						else
-							result.target = nil -- Prevent player from building up/down without sneaking. TODO: Probably make this configurable
-						end
-					elseif ((result.direction) and ((result.direction.x ~= 0) or (result.direction.z ~= 0))) then
-						if (not HorizHud) then
-							HorizHud = p:hud_add(hud_horiz_def)
-						end
-					end
-					if ((p.get_player_control(p).place) and (result.target) and (result.direction)) then
-						if (place_cooldown >= 0.3) then
-							place_cooldown = 0
-							local new_pos = vector.add(result.target.under, result.direction)
-							result.target.under = new_pos
-							if minetest.is_protected(new_pos, p:get_player_name()) then
-								return
-							end
-							local wieldstack = p:get_wielded_item()
-							p:set_wielded_item(minetest.item_place(wieldstack, p, result.target))
-						end
-					end
-				end
-			end
+	if (not p) then
+		return
+	end
+	if (not p:get_wielded_item()) then
+		return
+	end
+	local wield_name = ItemStack().get_name(p:get_wielded_item())
+	if (not minetest.registered_nodes[wield_name]) then
+		return
+	end
+	local dir = p:get_look_dir()
+	local eye_pos = p:get_pos()
+	eye_pos.y = eye_pos.y + p:get_properties().eye_height
+	local first, third = p:get_eye_offset()
+	if not vector.equals(first, third) then
+		minetest.log("warning", "First & third person eye offsets don't match, assuming first person")
+	end
+	eye_pos = vector.add(eye_pos, vector.divide(first, 10)) -- eye offsets are in block space (10x), transform them back to metric
+	local def = p:get_wielded_item():get_definition()
+	local scaled_look_dir = vector.multiply(dir, def.range or 4)
+	local look_yaw = vector.new(0, p:get_look_horizontal(), 0)
+	local look_xz = vector.normalize(vector.rotate(vector.new(0, 0, 1), look_yaw))
+	local direction_vec
+	if ((math.abs(look_xz.x)) > (math.abs(look_xz.z))) then
+		direction_vec = vector.normalize(vector.new(look_xz.x, 0, 0))
+	else
+		direction_vec = vector.normalize(vector.new(0, 0, look_xz.z))
+	end
+	local pointed = minetest.raycast(eye_pos, vector.add(eye_pos, scaled_look_dir), false, false)
+	local pointed_thing
+	local pointed_node
+	for pointed_thing in pointed do
+		if (pointed_thing and pointed_thing.type == "node") then
+			pointed_node = pointed_thing
 		end
+	end
+	if (pointed_node) then
+		return
+	end
+	local target, direction = get_extended_placement_target(eye_pos, scaled_look_dir, direction_vec, p)
+	if ((direction) and (direction.y ~= 0)) then
+		if (not VertHud) then
+			VertHud = p:hud_add(hud_vert_def)
+		end
+	elseif ((direction) and ((direction.x ~= 0) or (direction.z ~= 0))) then
+		if (not HorizHud) then
+			HorizHud = p:hud_add(hud_horiz_def)
+		end
+	end
+	if ((p.get_player_control(p).place) and (target) and (direction)) then
+		if (place_cooldown < 0.3) then
+			return
+		end
+		place_cooldown = 0
+		if (HorizHud) then
+			p:hud_remove(HorizHud)
+			HorizHud = nil
+		end
+		if (VertHud) then
+			p:hud_remove(VertHud)
+			VertHud = nil
+		end
+		local new_pos = vector.add(target.under, direction)
+		target.under = new_pos
+		if minetest.is_protected(new_pos, p:get_player_name()) then
+			return
+		end
+		local wieldstack = p:get_wielded_item()
+		local _, position = minetest.item_place(wieldstack, p, target)
+		if (not position) then
+			return
+		end
+		p:set_wielded_item(wieldstack)
+		local placed_node = minetest.get_node(position)
+		local placed_node_def = minetest.registered_nodes[placed_node.name]
+		local sound_param = {pos = position}
+		minetest.sound_play(placed_node_def.sounds.place, par, true)
 	end
 end
 
