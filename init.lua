@@ -78,6 +78,7 @@ end
 local place_cooldown = 0
 
 local function is_player_looking_past_node(dtime)
+	local hand_reach = minetest.registered_items[""].range or 4
 	place_cooldown = place_cooldown + dtime
 	local p = minetest.get_player_by_name("singleplayer")
 	if (HorizHud) then
@@ -107,7 +108,7 @@ local function is_player_looking_past_node(dtime)
 	end
 	eye_pos = vector.add(eye_pos, vector.divide(first, 10)) -- eye offsets are in block space (10x), transform them back to metric
 	local def = p:get_wielded_item():get_definition()
-	local scaled_look_dir = vector.multiply(dir, def.range or 4)
+	local scaled_look_dir = vector.multiply(dir, def.range or hand_reach)
 	local look_yaw = vector.new(0, p:get_look_horizontal(), 0)
 	local look_xz = vector.normalize(vector.rotate(vector.new(0, 0, 1), look_yaw))
 	local direction_vec
