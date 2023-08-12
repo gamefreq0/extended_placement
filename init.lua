@@ -42,7 +42,6 @@ local function get_vertical_target(eye_pos, scaled_look_dir, player)
 	local direction
 	for pointed_thing in pointed do
 		if ((pointed_thing) and (pointed_thing.type == "node") and (not target_at_player_height(eye_pos, pointed_thing, step_dir))) then
-			dbg.pp("Snoot")
 			target = pointed_thing
 			direction = step_dir
 			break
