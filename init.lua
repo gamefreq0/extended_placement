@@ -151,7 +151,7 @@ local function do_player_placement_checks(player, dtime)
 		player:hud_remove(VertHud[pname])
 		VertHud[pname] = nil
 	end
-	if minetest.is_protected(new_pos, player:get_player_name()) then
+	if minetest.is_protected(target, player:get_player_name()) then
 		return
 	end
 	local wieldstack = player:get_wielded_item()
