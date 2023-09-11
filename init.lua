@@ -167,11 +167,6 @@ local function do_player_placement_checks(player, dtime)
 end
 
 minetest.register_globalstep(function (dtime)
---	timer = timer + dtime
---	if (timer >= 0.01) then
---		timer = 0
---		is_player_looking_past_node(dtime)
---	end
 for _, player in pairs(minetest.get_connected_players()) do
 	do_player_placement_checks(player, dtime)
 end
