@@ -163,6 +163,9 @@ local function do_player_placement_checks(player, dtime)
 	local placed_node = minetest.get_node(position)
 	local placed_node_def = minetest.registered_nodes[placed_node.name]
 	local sound_param = {pos = position, to_player = player:get_player_name()}
+	if (not placed_node_def.sounds.place) then
+		return
+	end
 	minetest.sound_play(placed_node_def.sounds.place, sound_param, true)
 end
 
