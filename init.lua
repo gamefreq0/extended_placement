@@ -155,9 +155,16 @@ local function do_player_placement_checks(player, dtime)
 		return
 	end
 	local wieldstack = player:get_wielded_item()
-	local _, position = minetest.item_place(wieldstack, player, target)
+	local item_def = minetest.registered_items[wieldstack.get_name(wieldstack)]
+	if (not item_def) or (not item_def.on_place) then
+		return
+	end
+	local newstack, position= item_def.on_place(wieldstack, player, target)
 	if (not position) then
 		return
+	end
+	if (newstack) then
+		wieldstack = newstack
 	end
 	player:set_wielded_item(wieldstack)
 	local placed_node = minetest.get_node(position)
