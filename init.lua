@@ -159,14 +159,13 @@ local function do_player_placement_checks(player, dtime)
 	if (not item_def) or (not item_def.on_place) then
 		return
 	end
-	local newstack, position= item_def.on_place(wieldstack, player, target)
+	local newstack, position = item_def.on_place(wieldstack, player, target)
 	if (not position) then
 		return
 	end
 	if (newstack) then
-		wieldstack = newstack
+		player:set_wielded_item(newstack)
 	end
-	player:set_wielded_item(wieldstack)
 	local placed_node = minetest.get_node(position)
 	local placed_node_def = minetest.registered_nodes[placed_node.name]
 	local sound_param = {pos = position, to_player = player:get_player_name()}
